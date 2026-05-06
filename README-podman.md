@@ -80,3 +80,49 @@ podman commit trunk registry.lab.tail-f.com:5000/jenkins-doc:17-2404-custom
 ```bash
 podman rmi registry.lab.tail-f.com:5000/jenkins-doc:17-2404
 ```
+
+## Push an image to GitHub Container Registry
+
+### 1. Create a GitHub Personal Access Token (PAT)
+
+Create a token at https://github.com/settings/tokens with `write:packages` scope.
+
+### 2. Login to GitHub Container Registry
+
+```bash
+echo $GITHUB_TOKEN | podman login ghcr.io -u USERNAME --password-stdin
+```
+
+Replace `USERNAME` with your GitHub username and `$GITHUB_TOKEN` with your PAT.
+
+### 3. Tag your image
+
+Tag the image with the GitHub Container Registry format:
+
+```bash
+podman tag LOCAL_IMAGE ghcr.io/USERNAME/IMAGE_NAME:TAG
+```
+
+Example:
+```bash
+podman tag myapp:latest ghcr.io/ttornkvi/myapp:latest
+```
+
+### 4. Push the image
+
+```bash
+podman push ghcr.io/USERNAME/IMAGE_NAME:TAG
+```
+
+Example:
+```bash
+podman push ghcr.io/ttornkvi/myapp:latest
+```
+
+### 5. Make the package public (optional)
+
+By default, packages are private. To make it public:
+1. Go to https://github.com/USERNAME?tab=packages
+2. Select your package
+3. Click "Package settings"
+4. Scroll down and click "Change visibility"
