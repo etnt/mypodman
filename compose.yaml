@@ -1,0 +1,17 @@
+services:
+  erlang-dev:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: erlang_m1_dev
+    user: "tobbe"
+    volumes:
+      # Map a local folder to the container's home directory
+      - ./tobbe_home:/home/tobbe:z
+      # Map your project code to a subfolder
+      - .:/home/tobbe/app:z
+    working_dir: /home/tobbe/app
+    command: sleep infinity
+    stdin_open: true
+    tty: true
+
