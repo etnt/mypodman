@@ -87,6 +87,15 @@ podman rmi registry.lab.tail-f.com:5000/jenkins-doc:17-2404
 
 Create a token at https://github.com/settings/tokens with `write:packages` scope.
 
+Quick example:
+
+```bash
+echo $GITHUB_PODMAN_TOKEN | podman login ghcr.io -u etnt --password-stdin
+podman images
+podman tag 5ef9b21a6bba ghcr.io/etnt/mac-erlang-dev:v1
+podman images
+podman push ghcr.io/etnt/mac-erlang-dev:v1
+```
 ### 2. Login to GitHub Container Registry
 
 ```bash
