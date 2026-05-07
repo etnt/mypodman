@@ -1,137 +1,64 @@
-# Podman commands
+# Podman Operations Wizard
 
-## Enter a container
+An interactive, menu-driven script for managing Podman containers and images.
 
-```bash
-podman exec -it erlang_m1_dev bash
-```
+## Quick Start
 
-## Create and run a new container
-
-This command maps the home directory inside the container and keeps the
-same userid inside the container as we have on the Host.
+Run the wizard:
 
 ```bash
-podman run --name=trunk --userns=keep-id -v /home/tobbe:/home/tobbe -it registry.lab.tail-f.com:5000/jenkins-doc:17-2404 /bin/bash
+./podman-wizard.sh
 ```
 
-## Map ports between container and host
+## Features
 
-Use `-p` to forward a host port to a container port:
+The wizard provides an easy-to-use menu interface for common Podman operations:
 
-```bash
-podman run --name=trunk --userns=keep-id -v /home/tobbe:/home/tobbe -p 8080:8080 -it registry.lab.tail-f.com:5000/jenkins-doc:17-2404 /bin/bash
-```
+### Container Operations
+- **List containers** - View running or all containers
+- **Create and run new container** - Interactive setup with:
+  - Image selection from local images or remote registry
+  - Volume mapping options (home directory, current directory, custom paths)
+  - Port mapping
+  - Shell selection
+  - Save configuration for reuse
+- **Enter/exec into container** - Select from running containers and choose shell
+- **Start stopped container** - Select from stopped containers
+- **Stop running container** - Select from running containers  
+- **Remove container** - Select from all containers with status indicators
 
-Multiple ports can be mapped by repeating `-p`:
+### Image Operations
+- **List images** - View all local images
+- **Save container as new image (commit)** - Preserve container changes
+- **Tag image** - Add tags to images for pushing to registries
+- **Push image to registry** - Upload to GitHub Container Registry or other registries
+- **Remove image** - Delete local images
 
-```bash
-podman run --name=trunk --userns=keep-id -v /home/tobbe:/home/tobbe -p 8080:8080 -p 2024:2024 -it registry.lab.tail-f.com:5000/jenkins-doc:17-2404 /bin/bash
-```
+### Configuration Management
+- **Saved configurations** - Reuse container setups (image, volumes, ports, shell)
+- **Dry-run mode** - Preview commands without executing them
 
-## Start a stopped container
+## Configuration Files
 
-```bash
-podman start trunk
-```
+Container configurations are saved in `~/.config/podman-wizard/` and can be:
+- Loaded when creating new containers
+- Viewed and deleted through the management menu
 
-## Enter a running container
+## Volume Mapping
 
-```bash
-podman exec -it trunk /bin/bash
-```
+The wizard offers convenient volume mapping presets:
+- Home directory
+- Current directory  
+- Documents folder
+- Custom `my_home` directory (relative to script location)
+- Manual custom mapping
 
-## Stop a running container
+## Tips
 
-```bash
-podman stop trunk
-```
+- Use **dry-run mode** (option 'd') to see what commands will be executed
+- Save frequently used container configurations for quick setup
+- The script automatically detects running/stopped containers for easy selection
 
-## List containers
+## Advanced Usage
 
-```bash
-podman ps          # running containers
-podman ps -a       # all containers (including stopped)
-```
-
-## Remove a container
-
-```bash
-podman rm trunk
-```
-
-## List images
-
-```bash
-podman images
-```
-
-## Save a container as a new image
-
-If you've installed packages or made changes inside the container that
-you want to keep, commit it as a new image:
-
-```bash
-podman commit trunk registry.lab.tail-f.com:5000/jenkins-doc:17-2404-custom
-```
-
-## Remove an image
-
-```bash
-podman rmi registry.lab.tail-f.com:5000/jenkins-doc:17-2404
-```
-
-## Push an image to GitHub Container Registry
-
-### 1. Create a GitHub Personal Access Token (PAT)
-
-Create a token at https://github.com/settings/tokens with `write:packages` scope.
-
-Quick example:
-
-```bash
-echo $GITHUB_PODMAN_TOKEN | podman login ghcr.io -u etnt --password-stdin
-podman images
-podman tag 5ef9b21a6bba ghcr.io/etnt/mac-erlang-dev:v1
-podman images
-podman push ghcr.io/etnt/mac-erlang-dev:v1
-```
-### 2. Login to GitHub Container Registry
-
-```bash
-echo $GITHUB_TOKEN | podman login ghcr.io -u USERNAME --password-stdin
-```
-
-Replace `USERNAME` with your GitHub username and `$GITHUB_TOKEN` with your PAT.
-
-### 3. Tag your image
-
-Tag the image with the GitHub Container Registry format:
-
-```bash
-podman tag LOCAL_IMAGE ghcr.io/USERNAME/IMAGE_NAME:TAG
-```
-
-Example:
-```bash
-podman tag myapp:latest ghcr.io/ttornkvi/myapp:latest
-```
-
-### 4. Push the image
-
-```bash
-podman push ghcr.io/USERNAME/IMAGE_NAME:TAG
-```
-
-Example:
-```bash
-podman push ghcr.io/ttornkvi/myapp:latest
-```
-
-### 5. Make the package public (optional)
-
-By default, packages are private. To make it public:
-1. Go to https://github.com/USERNAME?tab=packages
-2. Select your package
-3. Click "Package settings"
-4. Scroll down and click "Change visibility"
+For manual Podman commands and advanced configurations, see [MANUAL_COMMANDS.md](MANUAL_COMMANDS.md)
