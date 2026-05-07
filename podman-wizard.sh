@@ -7,6 +7,7 @@ set -e
 
 DRY_RUN=false
 CONFIG_DIR="${HOME}/.config/podman-wizard"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOLD='\033[1m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -137,9 +138,44 @@ select_config() {
 }
 
 enter_container() {
-    list_containers
+    echo -e "\n${BOLD}Enter/exec into container${NC}"
+    
+    # Get list of running containers
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${BLUE}[DRY-RUN] Would list running containers with: podman ps --format '{{.Names}}'${NC}"
+        local containers=()
+    else
+        local containers=($(podman ps --format '{{.Names}}' 2>/dev/null || true))
+    fi
+    
+    if [ ${#containers[@]} -eq 0 ]; then
+        echo "No running containers found."
+        return
+    fi
+    
     echo ""
-    local container=$(prompt_input "Enter container name")
+    local i=1
+    for container in "${containers[@]}"; do
+        echo "  $i) $container"
+        ((i++))
+    done
+    echo "  0) Enter container name manually"
+    echo ""
+    
+    local choice
+    read -p "Select container to enter (0-${#containers[@]}): " choice
+    
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#containers[@]} ]; then
+        local container="${containers[$((choice-1))]}"
+        echo -e "${GREEN}Selected: $container${NC}"
+    else
+        local container=$(prompt_input "Enter container name")
+        if [ -z "$container" ]; then
+            echo "Cancelled"
+            return
+        fi
+    fi
+    
     local shell=$(prompt_input "Enter shell" "/bin/bash")
     execute_or_display "podman exec -it $container $shell"
 }
@@ -204,8 +240,9 @@ create_container() {
     if [ -d "$HOME/Documents" ]; then
         echo "  3) Map Documents: $HOME/Documents:$HOME/Documents"
     fi
-    if [ -d "/Users/ttornkvi/git/mypodman/tobbe_home" ]; then
-        echo "  4) Map tobbe_home: /Users/ttornkvi/git/mypodman/tobbe_home:/home/tobbe"
+    local my_home_dir="$SCRIPT_DIR/my_home"
+    if [ -d "$my_home_dir" ]; then
+        echo "  4) Map my_home directory (will prompt for container path)"
     fi
     echo "  5) Custom volume mapping"
     echo "  0) No volume mapping"
@@ -244,8 +281,9 @@ create_container() {
             fi
             ;;
         4)
-            if [ -d "/Users/ttornkvi/git/mypodman/tobbe_home" ]; then
-                local volume="/Users/ttornkvi/git/mypodman/tobbe_home:/home/tobbe"
+            if [ -d "$my_home_dir" ]; then
+                local container_path=$(prompt_input "Enter container mount path (e.g., /home/username)" "/home/$(whoami)")
+                local volume="$my_home_dir:$container_path"
                 echo -e "${GREEN}Selected: $volume${NC}"
             else
                 local volume=$(prompt_input "Enter volume mapping (host:container)" "$VOLUME")
@@ -400,9 +438,50 @@ stop_container() {
 }
 
 remove_container() {
-    list_containers -a
+    echo -e "\n${BOLD}Remove a container${NC}"
+    
+    # Get list of all containers (prioritize stopped ones)
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${BLUE}[DRY-RUN] Would list all containers with: podman ps -a --format '{{.Names}}\t{{.Status}}'${NC}"
+        local containers=()
+    else
+        local containers=($(podman ps -a --format '{{.Names}}' 2>/dev/null || true))
+    fi
+    
+    if [ ${#containers[@]} -eq 0 ]; then
+        echo "No containers found."
+        return
+    fi
+    
     echo ""
-    local container=$(prompt_input "Enter container name to remove")
+    local i=1
+    for container in "${containers[@]}"; do
+        # Show container status
+        if [ "$DRY_RUN" = false ]; then
+            local status=$(podman ps -a --filter "name=^${container}$" --format '{{.Status}}' 2>/dev/null | head -1)
+            echo "  $i) $container [$status]"
+        else
+            echo "  $i) $container"
+        fi
+        ((i++))
+    done
+    echo "  0) Enter container name manually"
+    echo ""
+    
+    local choice
+    read -p "Select container to remove (0-${#containers[@]}): " choice
+    
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#containers[@]} ]; then
+        local container="${containers[$((choice-1))]}"
+        echo -e "${GREEN}Selected: $container${NC}"
+    else
+        local container=$(prompt_input "Enter container name to remove")
+        if [ -z "$container" ]; then
+            echo "Cancelled"
+            return
+        fi
+    fi
+    
     if confirm "Are you sure you want to remove container '$container'?"; then
         execute_or_display "podman rm $container"
     else
@@ -481,7 +560,7 @@ manage_configs() {
     
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#configs[@]} ]; then
         local config_file="$CONFIG_DIR/${configs[$((choice-1))]}"
-        local config_name="${configs[$((choice-1))]:0:-4}"
+        local config_name="${configs[$((choice-1))]%.cfg}"
         
         echo -e "\n${BOLD}Configuration: $config_name${NC}"
         cat "$config_file"
