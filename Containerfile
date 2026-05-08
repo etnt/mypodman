@@ -6,10 +6,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rebar3 git bash ca-certificates sudo \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Create the 'tobbe' user
-# -m creates home, -s sets shell, -u 1000 is standard for the first non-root user
-RUN useradd -ms /bin/bash -u 1000 tobbe \
-    && echo "tobbe ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# Create the 'ttornkvi' user matching host UID/GID
+# -m creates home, -s sets shell, -u 501 -g 20 matches macOS host user
+RUN groupadd -g 20 hostgroup || true \
+    && useradd -ms /bin/bash -u 501 -g 20 ttornkvi \
+    && echo "ttornkvi ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-USER tobbe
-WORKDIR /home/tobbe
+USER ttornkvi
+WORKDIR /home/ttornkvi

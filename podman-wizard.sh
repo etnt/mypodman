@@ -80,6 +80,7 @@ save_container_config() {
     local volume="$3"
     local ports="$4"
     local shell="$5"
+    local userns="$6"
     
     local config_file="$CONFIG_DIR/${name}.cfg"
     cat > "$config_file" <<EOF
@@ -89,6 +90,7 @@ IMAGE="$image"
 VOLUME="$volume"
 PORTS="$ports"
 SHELL="$shell"
+USERNS="$userns"
 EOF
     echo -e "${GREEN}Configuration saved to: $config_file${NC}"
 }
@@ -184,7 +186,7 @@ create_container() {
     echo -e "\n${BOLD}Create and run a new container${NC}"
     
     # Try to load existing config
-    local IMAGE="" VOLUME="" PORTS="" SHELL="/bin/bash"
+    local IMAGE="" VOLUME="" PORTS="" SHELL="/bin/bash" USERNS="--userns=keep-id"
     local config_loaded=false
     
     if select_config; then
@@ -304,7 +306,45 @@ create_container() {
     
     local shell=$(prompt_input "Shell" "${SHELL:-/bin/bash}")
     
-    local cmd="podman run --name=$name --userns=keep-id"
+    # Ask user about UID/GID mapping strategy
+    echo -e "\n${BOLD}User namespace mapping:${NC}"
+    echo "  1) Auto-map to your host UID (keep-id) - Recommended"
+    echo "  2) Map to specific container UID (e.g., 1000:1000)"
+    echo "  3) No user namespace (run as image default user)"
+    echo ""
+    
+    local userns_choice
+    read -p "Select option (1-3) [1]: " userns_choice
+    userns_choice=${userns_choice:-1}
+    
+    local userns_flags=""
+    case $userns_choice in
+        1)
+            # Keep host UID/GID - override image USER and remap namespace
+            userns_flags="--userns=keep-id --user $(id -u):$(id -g)"
+            echo -e "${GREEN}Using: Auto-map to host UID $(id -u):$(id -g)${NC}"
+            ;;
+        2)
+            local target_uid=$(prompt_input "Target container UID" "1000")
+            local target_gid=$(prompt_input "Target container GID" "1000")
+            userns_flags="--userns=keep-id:uid=${target_uid},gid=${target_gid} --user ${target_uid}:${target_gid}"
+            echo -e "${GREEN}Using: Map to container UID ${target_uid}:${target_gid}${NC}"
+            ;;
+        3)
+            userns_flags=""
+            echo -e "${YELLOW}No user namespace mapping - running as image default user${NC}"
+            ;;
+        *)
+            userns_flags="--userns=keep-id --user $(id -u):$(id -g)"
+            echo -e "${GREEN}Using: Auto-map to host UID $(id -u):$(id -g) (default)${NC}"
+            ;;
+    esac
+    
+    local cmd="podman run --name=$name"
+    
+    if [ -n "$userns_flags" ]; then
+        cmd="$cmd $userns_flags"
+    fi
     
     if [ -n "$volume" ]; then
         cmd="$cmd -v $volume"
@@ -349,6 +389,19 @@ create_container() {
         fi
     fi
     
+    # Ask about working directory
+    echo ""
+    if confirm "Set working directory to mounted volume?"; then
+        if [ -n "$volume" ]; then
+            # Extract container path from volume mapping (format: host:container)
+            local container_path="${volume#*:}"
+            cmd="$cmd -w $container_path"
+            echo -e "${GREEN}Working directory: $container_path${NC}"
+        else
+            echo -e "${YELLOW}No volume mounted, skipping working directory${NC}"
+        fi
+    fi
+    
     cmd="$cmd -it $image $shell"
     execute_or_display "$cmd"
     
@@ -356,7 +409,7 @@ create_container() {
     if [ "$DRY_RUN" = false ]; then
         echo ""
         if confirm "Save this configuration for future use?"; then
-            save_container_config "$name" "$image" "$volume" "$ports" "$shell"
+            save_container_config "$name" "$image" "$volume" "$ports" "$shell" "$userns_flags"
         fi
     fi
 }
