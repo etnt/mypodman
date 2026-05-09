@@ -377,7 +377,7 @@ create_container() {
             fi
             cmd="$cmd -p $port"
             port_list+=("$port")
-            ((port_count++))
+            ((port_count++)) || true
             echo -e "${GREEN}Added port mapping: $port${NC}"
         done
         if [ $port_count -eq 0 ]; then
