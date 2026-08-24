@@ -636,6 +636,134 @@ toggle_dry_run() {
     fi
 }
 
+print_cli_help() {
+    cat <<EOF
+Podman Operations Wizard
+
+Usage:
+  $(basename "$0")                 Launch the interactive menu
+  $(basename "$0") [--dry-run] <command> [args]   Run a command and exit
+  $(basename "$0") help            Show this help and exit
+
+Options:
+  --dry-run, -n     Print the command instead of executing it
+
+Commands:
+  help                        Show this help
+  ps                          List running containers
+  ps-all, psa                 List all containers (including stopped)
+  images                      List images
+  create                      Create and run a new container (interactive)
+  enter <name> [shell]        Exec into a container (default shell: /bin/bash)
+  start <name>                Start a stopped container
+  stop <name>                 Stop a running container
+  rm <name>                   Remove a container
+  commit <container> <image>  Save a container as a new image
+  tag <source> <target>       Tag an image
+  push <image>                Push an image to a registry
+  rmi <image>                 Remove an image
+  configs                     Manage saved container configurations (interactive)
+EOF
+}
+
+run_cli() {
+    # Optional dry-run flag as the first argument
+    case "$1" in
+        --dry-run|-n)
+            DRY_RUN=true
+            shift
+            ;;
+    esac
+
+    local command="$1"
+    shift || true
+
+    case "$command" in
+        help|-h|--help)
+            print_cli_help
+            ;;
+        ps)
+            list_containers
+            ;;
+        ps-all|psa)
+            list_containers -a
+            ;;
+        images)
+            list_images
+            ;;
+        create)
+            create_container
+            ;;
+        enter|exec)
+            if [ -z "$1" ]; then
+                echo -e "${RED}Error: container name required. Usage: enter <name> [shell]${NC}" >&2
+                exit 1
+            fi
+            local container="$1"
+            local shell="${2:-/bin/bash}"
+            execute_or_display "podman exec -it $container $shell"
+            ;;
+        start)
+            if [ -z "$1" ]; then
+                echo -e "${RED}Error: container name required. Usage: start <name>${NC}" >&2
+                exit 1
+            fi
+            execute_or_display "podman start $1"
+            ;;
+        stop)
+            if [ -z "$1" ]; then
+                echo -e "${RED}Error: container name required. Usage: stop <name>${NC}" >&2
+                exit 1
+            fi
+            execute_or_display "podman stop $1"
+            ;;
+        rm)
+            if [ -z "$1" ]; then
+                echo -e "${RED}Error: container name required. Usage: rm <name>${NC}" >&2
+                exit 1
+            fi
+            execute_or_display "podman rm $1"
+            ;;
+        commit)
+            if [ -z "$1" ] || [ -z "$2" ]; then
+                echo -e "${RED}Error: usage: commit <container> <image>${NC}" >&2
+                exit 1
+            fi
+            execute_or_display "podman commit $1 $2"
+            ;;
+        tag)
+            if [ -z "$1" ] || [ -z "$2" ]; then
+                echo -e "${RED}Error: usage: tag <source> <target>${NC}" >&2
+                exit 1
+            fi
+            execute_or_display "podman tag $1 $2"
+            ;;
+        push)
+            if [ -z "$1" ]; then
+                echo -e "${RED}Error: image name required. Usage: push <image>${NC}" >&2
+                exit 1
+            fi
+            execute_or_display "podman push $1"
+            ;;
+        rmi)
+            if [ -z "$1" ]; then
+                echo -e "${RED}Error: image name required. Usage: rmi <image>${NC}" >&2
+                exit 1
+            fi
+            execute_or_display "podman rmi $1"
+            ;;
+        configs)
+            manage_configs
+            ;;
+        *)
+            echo -e "${RED}Unknown command: $command${NC}" >&2
+            echo "" >&2
+            print_cli_help >&2
+            exit 1
+            ;;
+    esac
+}
+
 show_menu() {
     print_header
     
@@ -732,6 +860,12 @@ main() {
 if ! command -v podman &> /dev/null; then
     echo -e "${RED}Error: podman command not found. Please install podman first.${NC}"
     exit 1
+fi
+
+# If arguments are provided, run in non-interactive CLI mode and exit
+if [ $# -gt 0 ]; then
+    run_cli "$@"
+    exit $?
 fi
 
 main
