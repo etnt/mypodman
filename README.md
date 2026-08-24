@@ -10,6 +10,42 @@ Run the wizard:
 ./podman-wizard.sh
 ```
 
+## Command-Line Usage
+
+In addition to the interactive menu, the wizard can run a single command and exit:
+
+```bash
+./podman-wizard.sh help              # Show a compact list of commands and exit
+./podman-wizard.sh <command> [args]  # Run a command and exit
+```
+
+Running the script with no arguments launches the interactive menu.
+
+### Available Commands
+
+| Command | Description |
+| --- | --- |
+| `help` | Show the command list and exit |
+| `ps` | List running containers |
+| `ps-all`, `psa` | List all containers (including stopped) |
+| `images` | List images |
+| `create` | Create and run a new container (interactive) |
+| `enter <name> [shell]` | Exec into a container (default shell: `/bin/bash`) |
+| `start <name>` | Start a stopped container |
+| `stop <name>` | Stop a running container |
+| `rm <name>` | Remove a container |
+| `commit <container> <image>` | Save a container as a new image |
+| `tag <source> <target>` | Tag an image |
+| `push <image>` | Push an image to a registry |
+| `rmi <image>` | Remove an image |
+| `configs` | Manage saved container configurations (interactive) |
+
+Pass `--dry-run` (or `-n`) as the first argument to print a command instead of executing it:
+
+```bash
+./podman-wizard.sh --dry-run stop mycontainer
+```
+
 ## Features
 
 The wizard provides an easy-to-use menu interface for common Podman operations:
@@ -55,7 +91,7 @@ The wizard offers convenient volume mapping presets:
 
 ## Tips
 
-- Use **dry-run mode** (option 'd') to see what commands will be executed
+- Use **dry-run mode** (option 'd' in the menu, or `--dry-run` on the command line) to see what commands will be executed
 - Save frequently used container configurations for quick setup
 - The script automatically detects running/stopped containers for easy selection
 
