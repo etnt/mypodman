@@ -56,6 +56,15 @@ podman ps          # running containers
 podman ps -a       # all containers (including stopped)
 ```
 
+## Inspect a container
+
+Show all details for a container, or print only its image name:
+
+```bash
+podman inspect trunk
+podman inspect --format '{{.ImageName}}' trunk
+```
+
 ## Remove a container
 
 ```bash

@@ -490,6 +490,70 @@ stop_container() {
     execute_or_display "podman stop $container"
 }
 
+inspect_container() {
+    local container="$1"
+
+    if [ -z "$container" ]; then
+        echo -e "\n${BOLD}Inspect container details${NC}"
+
+        if [ "$DRY_RUN" = true ]; then
+            echo -e "${BLUE}[DRY-RUN] Would list all containers with: podman ps -a --format '{{.Names}}'${NC}"
+            local containers=()
+        else
+            local containers=($(podman ps -a --format '{{.Names}}' 2>/dev/null || true))
+        fi
+
+        if [ ${#containers[@]} -eq 0 ] && [ "$DRY_RUN" != true ]; then
+            echo "No containers found."
+            return
+        fi
+
+        if [ ${#containers[@]} -eq 0 ]; then
+            echo "No containers available to list."
+        fi
+
+        echo ""
+        local i=1
+        for container_name in "${containers[@]}"; do
+            echo "  $i) $container_name"
+            ((i++))
+        done
+        echo "  0) Enter container name manually"
+        echo ""
+
+        local choice
+        read -p "Select container to inspect (0-${#containers[@]}): " choice
+
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#containers[@]} ]; then
+            container="${containers[$((choice-1))]}"
+            echo -e "${GREEN}Selected: $container${NC}"
+        else
+            container=$(prompt_input "Enter container name to inspect")
+            if [ -z "$container" ]; then
+                echo "Cancelled"
+                return
+            fi
+        fi
+    fi
+
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${BLUE}[DRY-RUN] Would show container info with: podman inspect $container${NC}"
+        return 0
+    fi
+
+    if ! podman container exists "$container" 2>/dev/null; then
+        echo -e "${RED}Error: container '$container' not found.${NC}" >&2
+        return 1
+    fi
+
+    podman inspect --format 'Name:      {{.Name}}
+Image:     {{.ImageName}}
+Status:    {{.State.Status}}
+ID:        {{.Id}}
+Created:   {{.Created}}
+Command:   {{.Config.Cmd}}' "$container" 2>/dev/null || true
+}
+
 remove_container() {
     echo -e "\n${BOLD}Remove a container${NC}"
     
@@ -657,6 +721,7 @@ Commands:
   enter <name> [shell]        Exec into a container (default shell: /bin/bash)
   start <name>                Start a stopped container
   stop <name>                 Stop a running container
+  inspect <name>              Show a short info summary of a container
   rm <name>                   Remove a container
   commit <container> <image>  Save a container as a new image
   tag <source> <target>       Tag an image
@@ -716,6 +781,13 @@ run_cli() {
                 exit 1
             fi
             execute_or_display "podman stop $1"
+            ;;
+        inspect)
+            if [ -z "$1" ]; then
+                echo -e "${RED}Error: container name required. Usage: inspect <name>${NC}" >&2
+                exit 1
+            fi
+            inspect_container "$1"
             ;;
         rm)
             if [ -z "$1" ]; then
@@ -779,13 +851,14 @@ show_menu() {
     echo "  5) Start stopped container"
     echo "  6) Stop running container"
     echo "  7) Remove container"
+    echo "  8) Inspect container details"
     echo ""
     echo "Image Operations:"
-    echo "  8) List images"
-    echo "  9) Save container as new image (commit)"
-    echo " 10) Tag image"
-    echo " 11) Push image to registry"
-    echo " 12) Remove image"
+    echo "  9) List images"
+    echo " 10) Save container as new image (commit)"
+    echo " 11) Tag image"
+    echo " 12) Push image to registry"
+    echo " 13) Remove image"
     echo ""
     echo "Settings:"
     echo "  c) Manage saved configurations"
@@ -822,18 +895,21 @@ main() {
                 remove_container
                 ;;
             8)
-                list_images
+                inspect_container
                 ;;
             9)
-                commit_image
+                list_images
                 ;;
             10)
-                tag_image
+                commit_image
                 ;;
             11)
-                push_image
+                tag_image
                 ;;
             12)
+                push_image
+                ;;
+            13)
                 remove_image
                 ;;
             c|C)

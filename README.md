@@ -33,6 +33,7 @@ Running the script with no arguments launches the interactive menu.
 | `enter <name> [shell]` | Exec into a container (default shell: `/bin/bash`) |
 | `start <name>` | Start a stopped container |
 | `stop <name>` | Stop a running container |
+| `inspect <name>` | Show a short info summary of a container (image, status, etc.) |
 | `rm <name>` | Remove a container |
 | `commit <container> <image>` | Save a container as a new image |
 | `tag <source> <target>` | Tag an image |
@@ -61,6 +62,7 @@ The wizard provides an easy-to-use menu interface for common Podman operations:
 - **Enter/exec into container** - Select from running containers and choose shell
 - **Start stopped container** - Select from stopped containers
 - **Stop running container** - Select from running containers  
+- **Inspect container details** - View the image, status, ID, creation time, and command
 - **Remove container** - Select from all containers with status indicators
 
 ### Image Operations
