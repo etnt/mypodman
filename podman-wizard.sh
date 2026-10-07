@@ -537,7 +537,7 @@ inspect_container() {
     fi
 
     if [ "$DRY_RUN" = true ]; then
-        echo -e "${BLUE}[DRY-RUN] Would show container info with: podman inspect $container${NC}"
+        echo -e "${BLUE}[DRY-RUN] Would show container details and mapped volumes with: podman inspect $container${NC}"
         return 0
     fi
 
@@ -551,7 +551,11 @@ Image:     {{.ImageName}}
 Status:    {{.State.Status}}
 ID:        {{.Id}}
 Created:   {{.Created}}
-Command:   {{.Config.Cmd}}' "$container" 2>/dev/null || true
+Command:   {{.Config.Cmd}}
+Mapped volumes:
+{{range .Mounts}}  {{.Type}}: {{.Source}} -> {{.Destination}} (read-write: {{.RW}})
+{{else}}  None
+{{end}}' "$container" 2>/dev/null || true
 }
 
 remove_container() {

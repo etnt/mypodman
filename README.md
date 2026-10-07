@@ -33,7 +33,7 @@ Running the script with no arguments launches the interactive menu.
 | `enter <name> [shell]` | Exec into a container (default shell: `/bin/bash`) |
 | `start <name>` | Start a stopped container |
 | `stop <name>` | Stop a running container |
-| `inspect <name>` | Show a short info summary of a container (image, status, etc.) |
+| `inspect <name>` | Show container details and mapped volumes |
 | `rm <name>` | Remove a container |
 | `commit <container> <image>` | Save a container as a new image |
 | `tag <source> <target>` | Tag an image |
