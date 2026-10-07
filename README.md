@@ -99,4 +99,6 @@ The wizard offers convenient volume mapping presets:
 
 ## Advanced Usage
 
-For manual Podman commands and advanced configurations, see [MANUAL_COMMANDS.md](MANUAL_COMMANDS.md)
+For manual Podman commands and advanced configurations, see [MANUAL_COMMANDS.md](MANUAL_COMMANDS.md).
+
+For a Debian development sandbox, see [sandbox/README.md](sandbox/README.md).
