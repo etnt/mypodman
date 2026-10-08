@@ -23,6 +23,7 @@ RUN apt-get update \
         erlang-public-key \
         erlang-ssl \
         erlang-tools \
+        fd-find \
         gdb \
         git \
         jujutsu \
@@ -35,8 +36,10 @@ RUN apt-get update \
         python3-dev \
         python3-pip \
         python3-venv \
+        ripgrep \
         sudo \
         xz-utils \
+    && ln -s /usr/bin/fdfind /usr/local/bin/fd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI from its signed Debian package repository.

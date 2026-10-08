@@ -28,7 +28,7 @@ Run `./sandbox/sandbox-wizard.sh help` to see the command list. Run the wizard w
 
 ## Image contents
 
-The image uses `debian:testing-slim`. It includes C build tools, Erlang, Node.js, Python, `sudo`, Git, jj, Helix, GitHub CLI, GitHub Copilot CLI, pi, and common shell and SSH tools. The user name defaults to `dev`. The image user has UID and GID 1000. The wizard uses these IDs for Podman's `keep-id` mapping, so do not change them without changing the run command too.
+The image uses `debian:testing-slim`. It includes C build tools, Erlang, Node.js, Python, `sudo`, Git, jj, Helix, GitHub CLI, GitHub Copilot CLI, pi, ripgrep (`rg`), fd (`fd`), and common shell and SSH tools. ripgrep and fd come from Debian packages. pi uses them without a download, which would fail because the sandbox has no direct network access. The user name defaults to `dev`. The image user has UID and GID 1000. The wizard uses these IDs for Podman's `keep-id` mapping, so do not change them without changing the run command too.
 
 The image installs `gh` from GitHub's signed Debian repository. It pins Node.js 24.21.0, Copilot CLI 1.0.93, pi 0.73.1, and Helix 25.07.1. Set the `NODE_VERSION`, `COPILOT_CLI_VERSION`, `PI_VERSION`, or `HELIX_VERSION` build argument to choose another release. To reduce image size, Helix keeps grammars for the requested languages and common project files. The build command also builds the credential proxy image.
 
