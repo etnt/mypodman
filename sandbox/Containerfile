@@ -27,6 +27,7 @@ RUN apt-get update \
         git \
         jujutsu \
         less \
+        netcat-openbsd \
         openssh-client \
         pkg-config \
         procps \
@@ -106,6 +107,10 @@ RUN set -eux; \
     rm /tmp/helix.tar.xz
 
 ENV HELIX_RUNTIME=/opt/helix/runtime
+RUN mkdir -p /usr/local/lib/sandbox
+COPY configure_pi_proxy.py /usr/local/lib/sandbox/configure_pi_proxy.py
+COPY proxy_bridge.py /usr/local/lib/sandbox/proxy_bridge.py
+RUN chmod 0555 /usr/local/lib/sandbox/configure_pi_proxy.py /usr/local/lib/sandbox/proxy_bridge.py
 
 RUN set -eux; \
     case "$USER_NAME" in \
@@ -113,10 +118,17 @@ RUN set -eux; \
     esac; \
     groupadd --gid 1000 "$USER_NAME"; \
     useradd --uid 1000 --gid 1000 --create-home --home-dir "/home/$USER_NAME" --shell /bin/bash "$USER_NAME"; \
+    install -d -m 0700 -o "$USER_NAME" -g "$USER_NAME" "/home/$USER_NAME/.ssh"; \
+    install -d -m 0700 -o "$USER_NAME" -g "$USER_NAME" /var/lib/sandbox/pi-agent; \
     usermod --append --groups sudo "$USER_NAME"; \
     printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$USER_NAME" > "/etc/sudoers.d/$USER_NAME"; \
     chmod 0440 "/etc/sudoers.d/$USER_NAME"; \
     visudo --check --file="/etc/sudoers.d/$USER_NAME"
+
+RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    printf 'Acquire::https::Proxy "http://127.0.0.1:8765";\n' > /etc/apt/apt.conf.d/90credential-proxy
 
 LABEL io.mypodman.sandbox-user="${USER_NAME}"
 ENV HOME="/home/${USER_NAME}"
