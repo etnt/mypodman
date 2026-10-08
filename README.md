@@ -2,6 +2,8 @@
 
 An interactive, menu-driven script for managing Podman containers and images.
 
+For AI development using a locked down sandbox, see [sandbox/README.md](sandbox/README.md).
+
 ## Quick Start
 
 Run the wizard:
@@ -101,4 +103,3 @@ The wizard offers convenient volume mapping presets:
 
 For manual Podman commands and advanced configurations, see [MANUAL_COMMANDS.md](MANUAL_COMMANDS.md).
 
-For a Debian development sandbox, see [sandbox/README.md](sandbox/README.md).
