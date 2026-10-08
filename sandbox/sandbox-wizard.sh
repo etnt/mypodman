@@ -189,9 +189,71 @@ prepare_secret() {
     fi
 }
 
+add_api_secret_from_environment() {
+    local env_name="$1" secret_name value
+    value="${!env_name}"
+    if [[ -z "$value" ]]; then
+        printf '%bSkipping %s because its value is empty.%b\n' "$YELLOW" "$env_name" "$NC"
+        return 1
+    fi
+
+    secret_name="$env_name"
+    if ! valid_name "$secret_name"; then
+        secret_name="${CONTAINER_NAME}-${env_name}"
+    fi
+
+    if [[ "$DRY_RUN" == false ]] && podman secret inspect "$secret_name" >/dev/null 2>&1; then
+        printf 'Podman secret %s already exists.\n' "$secret_name"
+        if confirm "Reuse the stored secret instead of the current environment value" n; then
+            API_SECRET_NAMES+=("$secret_name")
+            API_SECRET_VARS+=("$env_name")
+            unset value
+            return 0
+        fi
+        prompt_input "New Podman secret name" "${CONTAINER_NAME}-${env_name}"
+        secret_name="$REPLY"
+        if ! valid_name "$secret_name"; then
+            printf '%bInvalid Podman secret name: %s%b\n' "$RED" "$secret_name" "$NC" >&2
+            unset value
+            return 1
+        fi
+        if podman secret inspect "$secret_name" >/dev/null 2>&1; then
+            printf '%bPodman secret %s already exists. Choose another name or remove it first.%b\n' "$RED" "$secret_name" "$NC" >&2
+            unset value
+            return 1
+        fi
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        printf '%b[DRY-RUN] Would create secret %s from environment variable %s. The value is hidden.%b\n' "$BLUE" "$secret_name" "$env_name" "$NC"
+        run_podman secret create "$secret_name" - || { unset value; return 1; }
+    else
+        printf '%s' "$value" | run_podman secret create "$secret_name" - || { unset value; return 1; }
+    fi
+    API_SECRET_NAMES+=("$secret_name")
+    API_SECRET_VARS+=("$env_name")
+    unset value
+}
+
 add_api_secrets() {
-    local secret_name env_name
-    while confirm "Add an API key" n; do
+    local env_name secret_name
+    local -a env_vars=()
+    while IFS= read -r env_name; do
+        [[ -n "$env_name" ]] && env_vars+=("$env_name")
+    done < <(compgen -e | grep -i 'API_KEY' || true)
+
+    if ((${#env_vars[@]} > 0)); then
+        printf 'Exported environment variable names containing API_KEY were found. Values will not be displayed.\n'
+        for env_name in "${env_vars[@]}"; do
+            if confirm "Provide $env_name to this sandbox as a Podman secret" n; then
+                add_api_secret_from_environment "$env_name" || true
+            fi
+        done
+    else
+        printf 'No exported environment variable names containing API_KEY were found.\n'
+    fi
+
+    while confirm "Add another API key manually" n; do
         prompt_input "Podman secret name"
         secret_name="$REPLY"
         prompt_input "Environment variable name" "$(printf '%s' "$secret_name" | tr '[:lower:].-' '[:upper:]__')"
@@ -390,6 +452,7 @@ manage_secrets() {
     local action="${1:-ls}" name value
     case "$action" in
         ls|list)
+            printf 'Podman secrets stored on this Podman connection. This list does not show container mappings.\n'
             run_podman secret ls
             ;;
         create)
@@ -469,9 +532,38 @@ run_cli() {
     case "$command" in
         help|-h|--help)
             cat <<EOF
-Usage: $0 [--dry-run] [command]
-Commands: build, create, enter [name] [shell], ps [all], start NAME, stop NAME,
-          rm NAME, commit NAME IMAGE, secrets [ls|create NAME|rm NAME], configs [ls|rm NAME]
+Usage:
+  $0                         Open the interactive menu
+  $0 help                    Show this help
+  $0 [--dry-run|-n] COMMAND [ARGS...]
+
+Commands:
+  build                      Build the Debian development image
+  create                     Create a sandbox from the current directory
+  enter [NAME] [SHELL]       Enter a running sandbox
+  ps [all]                   List running sandboxes, or all sandboxes
+  start NAME                 Start a stopped sandbox
+  stop NAME                  Stop a sandbox
+  rm NAME                    Remove a sandbox
+  commit NAME IMAGE          Save a sandbox as a new image
+  secrets [ls|create|rm]     List, create, or remove Podman secrets
+  configs [ls|rm]            List or remove saved sandbox configurations
+
+Create flow:
+  The wizard asks which exported environment variables containing API_KEY to pass as secrets.
+  It displays variable names only. It asks separately whether to mount an SSH private key.
+  The current directory becomes /home/<user> inside the sandbox.
+
+Secrets:
+  secrets ls lists secrets stored by Podman. It does not show container mappings.
+  API secrets enter the sandbox as environment variables. SSH keys use a read-only secret file.
+
+Examples:
+  $0 build
+  $0 create
+  $0 enter dev-sandbox
+  $0 --dry-run create
+  $0 secrets ls
 EOF
             ;;
         build)
