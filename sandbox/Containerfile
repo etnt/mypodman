@@ -5,7 +5,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG USER_NAME=dev
 ARG NODE_VERSION=24.21.0
 ARG COPILOT_CLI_VERSION=1.0.93
-ARG PI_VERSION=0.73.1
+ARG PI_VERSION=1.1.0
 ARG HELIX_VERSION=25.07.1
 
 RUN apt-get update \
@@ -77,11 +77,20 @@ RUN set -eux; \
     ln -s /opt/node/bin/npx /usr/local/bin/npx; \
     rm "/tmp/${node_archive}" /tmp/node-shasums.txt
 
-# Install pinned GitHub Copilot CLI and pi agent packages.
+# Install the pinned GitHub Copilot CLI.
 RUN npm install --global --prefix /usr/local \
         "@github/copilot@${COPILOT_CLI_VERSION}" \
-        "@mariozechner/pi-coding-agent@${PI_VERSION}" \
     && npm cache clean --force
+
+# Install the pinned pi agent into a prefix that the sandbox user owns, so that
+# "pi update" can replace it. The prefix is not under /home because the wizard
+# can mount a host directory over the home directory. UID and GID 1000 match the
+# user that the image creates later.
+RUN npm install --global --ignore-scripts --prefix /opt/pi \
+        "@earendil-works/pi-coding-agent@${PI_VERSION}" \
+    && npm cache clean --force \
+    && chown -R 1000:1000 /opt/pi \
+    && ln -s /opt/pi/bin/pi /usr/local/bin/pi
 
 # Debian Testing does not package Helix on every architecture. Install the pinned official release.
 RUN set -eux; \

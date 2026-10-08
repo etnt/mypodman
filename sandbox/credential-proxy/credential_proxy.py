@@ -83,6 +83,7 @@ CONNECT_ALLOWLIST = {
     ("pypi.org", 443),
     ("files.pythonhosted.org", 443),
     ("nodejs.org", 443),
+    ("pi.dev", 443),
 }
 
 REQUEST_HEADERS = {

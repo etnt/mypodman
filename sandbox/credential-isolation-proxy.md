@@ -77,6 +77,6 @@ The proxy accepts API calls from code in the sandbox. Set provider quota limits 
 
 Allowed hosts can carry data out of the sandbox. For example, code can use `api.github.com` or `github.com` with the SSH key or a saved GitHub login to send data to a repository or gist that you do not control. Credential isolation protects API keys. It does not stop code from copying files that it can read.
 
-The proxy allows HTTPS connections only to selected GitHub and package hosts. It blocks direct internet access to other hosts. Add a destination to the proxy allowlist only when the sandbox needs it.
+The proxy allows HTTPS connections only to selected GitHub and package hosts, and to `pi.dev` for `pi update`. It blocks direct internet access to other hosts. Add a destination to the proxy allowlist only when the sandbox needs it.
 
 This setup does not update existing containers. Remove and recreate each sandbox that received a real API key. Remove old API-key secrets after no container uses them. Rotate a key if untrusted code could read it.
